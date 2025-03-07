@@ -46,9 +46,12 @@ RUN apk --no-cache --update \
 # 复制 ./epg 文件夹内容到 /htdocs
 COPY ./epg /htdocs
 
+# 修改 Apache 配置文件，设置端口为 5678
+RUN sed -i 's/Listen 80/Listen 5678/' /etc/apache2/httpd.conf
+
 EXPOSE 5678
 
 ADD docker-entrypoint.sh /
 RUN chmod +x /docker-entrypoint.sh
 
-ENTRYPOINT ["php","-S","[::]:5678","/docker-entrypoint.sh"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
