@@ -47,8 +47,7 @@ RUN apk --no-cache --update \
 COPY ./epg /htdocs
 
 # 修改 Apache 配置中的端口为 5678，包括 Listen 指令和虚拟主机配置
-RUN sed -i -e 's/Listen 80/Listen 5678/' -e 's/Listen 443/Listen 5678/' /etc/apache2/httpd.conf \
-    && sed -i -e 's/:80/:5678/g' -e 's/:443/:5678/g' /etc/apache2/conf.d/*.conf
+RUN sed -i -e 's/Listen 80 443/Listen 5678/' /etc/apache2/httpd.conf
 
 EXPOSE 5678
 
