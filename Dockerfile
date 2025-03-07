@@ -51,4 +51,4 @@ EXPOSE 5678
 ADD docker-entrypoint.sh /
 RUN chmod +x /docker-entrypoint.sh
 
-ENTRYPOINT ["[::]:5678","/docker-entrypoint.sh"]
+ENTRYPOINT ["php","-S","[::]:5678","/docker-entrypoint.sh"]
