@@ -51,4 +51,4 @@ EXPOSE 5678
 ADD docker-entrypoint.sh /
 RUN chmod +x /docker-entrypoint.sh
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+ENTRYPOINT ["-S","0.0.0.0:5678","/docker-entrypoint.sh"]
