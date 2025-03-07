@@ -48,7 +48,9 @@ COPY ./epg /htdocs
 
 EXPOSE 5678
 
+CMD ["php","-S","[::]:5678"]
+
 ADD docker-entrypoint.sh /
 RUN chmod +x /docker-entrypoint.sh
 
-ENTRYPOINT ["php","-S","[::]:5678","/docker-entrypoint.sh"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
