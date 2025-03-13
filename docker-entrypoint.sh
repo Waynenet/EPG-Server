@@ -9,8 +9,23 @@ HTTPS_SERVER_NAME="${HTTPS_SERVER_NAME:-www.example.com}"
 LOG_LEVEL="${LOG_LEVEL:-info}"
 TZ="${TZ:-Asia/Shanghai}"
 PHP_MEMORY_LIMIT="${PHP_MEMORY_LIMIT:-512M}"
+ENABLE_FFMPEG="${ENABLE_FFMPEG:-false}"
 
 echo 'Updating configurations'
+
+# Check and install ffmpeg if ENABLE_FFMPEG is set to true
+if [ "$ENABLE_FFMPEG" = "true" ]; then
+    echo "Using USTC mirror for package installation..."
+    sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
+    if ! apk info ffmpeg > /dev/null 2>&1; then
+        echo "Installing ffmpeg..."
+        apk add --no-cache ffmpeg
+    else
+        echo "ffmpeg is already installed."
+    fi
+else
+    echo "Skipping ffmpeg installation."
+fi
 
 # Check if the required configuration is already present
 if ! grep -q "# Directory Listing Disabled" /etc/apache2/httpd.conf; then

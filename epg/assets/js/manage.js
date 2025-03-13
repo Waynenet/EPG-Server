@@ -1,8 +1,8 @@
 // 页面加载时预加载数据，减少等待时间
 document.addEventListener('DOMContentLoaded', function() {
-    showModal('live', $popup = false);
-    showModal('channel', $popup = false);
-    showModal('update', $popup = false);
+    showModal('live', popup = false);
+    showModal('channel', popup = false);
+    showModal('update', popup = false);
     showVersionLog(doCheckUpdate = true);
 });
 
@@ -159,27 +159,27 @@ function updateMySQLFields() {
 
 // 显示带消息的模态框
 function showModalWithMessage(modalId, messageId = '', message = '') {
-    if (messageId) {
-        document.getElementById(messageId).innerHTML = message;
-    }
-    
-    var modal = document.getElementById(modalId);
-    modal.style.zIndex = zIndex++; // 确保在最上层
+    const modal = document.getElementById(modalId);
+    if (messageId) document.getElementById(messageId).innerHTML = message;
+
+    modal.style.zIndex = zIndex++;
     modal.style.display = "block";
 
-    var originalOnMouseDown = window.onmousedown;
-    function handleModalClose() {
-        modal.style.display = "none";
-        window.onmousedown = originalOnMouseDown; // 恢复原事件
-    }
+    const closeBtn = modal.querySelector(".close");
+    closeBtn.onmousedown = () => modal.style.display = "none";
 
-    var closeBtn = modal.querySelector(".close");
-    closeBtn.onmousedown = handleModalClose;
-    window.onmousedown = function(event) {
+    // 处理点击模态框外部关闭
+    const handleClickOutside = (event) => {
         if (event.target === modal) {
-            handleModalClose();
+            modal.style.display = "none";
+            window.removeEventListener('mousedown', handleClickOutside); // 关闭后移除事件监听器
         }
     };
+
+    window.addEventListener('mousedown', handleClickOutside);
+
+    // 阻止点击模态框内部时关闭
+    modal.querySelector('.modal-content').addEventListener('mousedown', (e) => e.stopPropagation());
 }
 
 // 显示消息模态框
@@ -189,19 +189,19 @@ function showMessageModal(message) {
 
 let zIndex = 100;
 // 显示模态框公共函数
-function showModal(type, $popup = true, $data = '') {
+function showModal(type, popup = true, data = '') {
     var modal, logSpan, logContent;
     switch (type) {
         case 'epg':
             modal = document.getElementById("epgModal");
-            fetchData("manage.php?get_epg_by_channel=true&channel=" + encodeURIComponent($data.channel) + "&date=" + $data.date, updateEpgContent);
+            fetchData("manage.php?get_epg_by_channel=true&channel=" + encodeURIComponent(data.channel) + "&date=" + data.date, updateEpgContent);
 
             // 更新日期的点击事件
             const updateDate = function(offset) {
                 const currentDate = new Date(document.getElementById("epgDate").innerText);
                 currentDate.setDate(currentDate.getDate() + offset);
                 const newDateString = currentDate.toISOString().split('T')[0];
-                fetchData(`manage.php?get_epg_by_channel=true&channel=${encodeURIComponent($data.channel)}&date=${newDateString}`, updateEpgContent);
+                fetchData(`manage.php?get_epg_by_channel=true&channel=${encodeURIComponent(data.channel)}&date=${newDateString}`, updateEpgContent);
                 document.getElementById("epgDate").innerText = newDateString;
             };
 
@@ -253,7 +253,7 @@ function showModal(type, $popup = true, $data = '') {
             console.error('Unknown type:', type);
             break;
     }
-    if (!$popup) {
+    if (!popup) {
         return;
     }
     modal.style.zIndex = zIndex++; // 确保 modal 在最上层
@@ -285,7 +285,8 @@ function fetchData(endpoint, callback) {
 }
 
 // 显示 update.php、check.php 执行结果
-function showExecResult(fileName, callback) {
+function showExecResult(fileName, callback, fullSize = true) {
+    
     showMessageModal('');
     const messageContainer = document.getElementById('messageModalMessage');
 
@@ -293,8 +294,10 @@ function showExecResult(fileName, callback) {
     messageContainer.innerHTML = '';
 
     const wrapper = document.createElement('div');
-    wrapper.style.width = '800px';
-    wrapper.style.height = '500px';
+    if (fullSize) {
+        wrapper.style.width = '800px';
+        wrapper.style.height = '500px';
+    }
     wrapper.style.overflow = 'auto';
     messageContainer.appendChild(wrapper);
 
@@ -675,9 +678,10 @@ function toggleStatus(toggleBtn) {
 }
 
 // 保存编辑后的直播源地址
-document.getElementById('sourceUrlTextarea').addEventListener('blur', function() {
-    const sourceContent = this.value.replace(/^\s*[\r\n]+/gm, '').replace(/\n$/, '');
-    this.value = sourceContent;
+function saveLiveSourceFile() {
+    source = document.getElementById('sourceUrlTextarea');
+    const sourceContent = source.value.replace(/^\s*[\r\n]+/gm, '').replace(/\n$/, '');
+    source.value = sourceContent;
 
     // 内容写入 source.txt 文件
     fetch('manage.php', {
@@ -692,7 +696,9 @@ document.getElementById('sourceUrlTextarea').addEventListener('blur', function()
     .catch(error => {
         showMessageModal('保存失败: ' + error);
     });
-});
+}
+
+document.getElementById('sourceUrlTextarea').addEventListener('blur', saveLiveSourceFile);
 
 // 显示更多直播源设置
 function showMoreLiveSetting(sourceSync, nameProcess) {
@@ -708,7 +714,7 @@ function showMoreLiveSetting(sourceSync, nameProcess) {
 }
 
 // 保存编辑后的直播源信息
-function saveLiveSourceInfo(popup = true) {
+function saveLiveSourceInfo(popup = true, filePath = '') {
     // 获取 checkbox 配置
     const liveTvgLogoEnable = document.getElementById('live_tvg_logo_enable').value;
     const liveTvgIdEnable = document.getElementById('live_tvg_id_enable').value;
@@ -723,6 +729,7 @@ function saveLiveSourceInfo(popup = true) {
             live_tvg_logo_enable: liveTvgLogoEnable,
             live_tvg_id_enable: liveTvgIdEnable,
             live_tvg_name_enable: liveTvgNameEnable,
+            file_path: filePath,
             content: JSON.stringify(allLiveData)
         })
     })
@@ -739,24 +746,70 @@ function saveLiveSourceInfo(popup = true) {
     });
 }
 
+// 直播源信息另存为新文件
+function saveLiveSourceInfoAs() {
+    showMessageModal('');
+    document.getElementById('messageModalMessage').innerHTML = `
+        <div style="width: 180px;">
+            <h3>另存为</h3>
+            <input type="text" value="" id="fileName" style="text-align: center; font-size: 15px; margin-bottom: 15px;" />
+            <button id="confirmBtn" style="margin-bottom: -10px;">确认</button>
+        </div>
+    `;
+
+    // 添加按钮点击事件，点击后另存为新文件
+    document.getElementById('confirmBtn').onclick = function () {
+        fileName = document.getElementById('fileName').value;
+        saveLiveSourceInfo(popup = false, fileName);
+    
+        // 检查并添加 fileName 到文本框
+        let t = document.getElementById('sourceUrlTextarea');
+        if (!t.value.split('\n').some(line => line.replace(/[#\s]/g, '').trim() === fileName)) {
+            t.value += `\n# ${fileName}`;
+            t.scrollTop = t.scrollHeight;
+            saveLiveSourceFile();
+        }
+
+        const [token, serverUrl, tokenRange] = document.getElementById('showLiveUrlBtn')
+            .getAttribute('onclick')
+            .match(/\`(.*?)\`/g)
+            .map(s => s.slice(1, -1));
+        var tokenStr = (tokenRange == 1 || tokenRange == 3) ? `token=${token}&` : '';
+        var m3uUrl = `${serverUrl}/index.php?${tokenStr}live=m3u&url=${fileName}`;
+        var txtUrl = `${serverUrl}/index.php?${tokenStr}live=txt&url=${fileName}`;
+        message = `成功另存为 ${fileName}<br>
+                    M3U：<br><a href="${m3uUrl}" target="_blank">${m3uUrl}</a><br>
+                    TXT：<br><a href="${txtUrl}" target="_blank">${txtUrl}`;
+        showMessageModal(message);
+    };
+}
+
 // 检验每个直播源的访问速度及分辨率
 function checkSource() {
     showMessageModal('');
     const messageContainer = document.getElementById('messageModalMessage');
 
-    // 设置说明和确认按钮
+    // 设置说明和开始测试、清除结果按钮
     messageContainer.innerHTML = `
         <div>
         即将开始检测每个直播源的访问速度及分辨率，<br>
         该过程可能需要一些时间，请耐心等待。<br><br>
         注意：结果不一定准确，且暂无法解析 IPv6 源。<br><br>
         </div>
-        <button id="confirmCheckBtn">确认</button>
+        <div class="button-container">
+            <button id="confirmCheckBtn" style="margin-bottom: -10px;">开始测速</button>
+            <button id="cleanCheckResultBtn" style="margin-bottom: -10px;">清除结果</button>
+        </div>
     `;
 
-    // 添加按钮点击事件，点击后执行 showExecResult
+    // 开始测速
     document.getElementById('confirmCheckBtn').onclick = function () {
-        showExecResult('check.php', () => showModal('live', $popup = false));
+        showExecResult('check.php', () => showModal('live', popup = false));
+    };
+
+    // 清除结果
+    document.getElementById('cleanCheckResultBtn').onclick = function () {
+        showExecResult('check.php?cleanMode=true', () => showModal('live', popup = false), fullSize = false);
     };
 }
 
@@ -1228,7 +1281,7 @@ document.getElementById('importFile').addEventListener('change', function() {
 // 修改 token、user_agent 对话框
 function changeTokenUA(type, currentTokenUA) {
     showMessageModal('');
-    typeStr = type === 'token' ? 'Token' : 'User-Agent<br>支持多个，逗号分隔';
+    typeStr = (type === 'token' ? 'Token' : 'User-Agent') + '<br>支持多个，逗号分隔';
     document.getElementById('messageModalMessage').innerHTML = `
         <div style="width: 180px;">
             <h3>修改 ${typeStr}</h3>

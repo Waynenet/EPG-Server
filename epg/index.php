@@ -26,13 +26,16 @@ parse_str(str_replace('+', '%2B', parse_url($requestUrl, PHP_URL_QUERY)), $query
 
 // 获取 URL 中的 token 参数并验证
 $tokenRange = $Config['token_range'] ?? 1;
-$token = $query_params['token'] ?? '';
 $live = $query_params['live'] ?? '';
-if ($tokenRange !== 0 && $token !== $Config['token'] && 
-    (($tokenRange !== 2 && $live) || ($tokenRange !== 1 && !$live))) {
-    http_response_code(403);
-    echo '访问被拒绝：无效的 Token。';
-    exit;
+if ($tokenRange !== 0) {
+    $allowedTokens = array_map('trim', explode(',', $Config['token'] ?? ''));
+    $token = $query_params['token'] ?? '';
+    if (!in_array($token, $allowedTokens) &&  (($tokenRange !== 2 && $live) || 
+        ($tokenRange !== 1 && !$live))) {
+        http_response_code(403);
+        echo '访问被拒绝：无效的 Token。';
+        exit;
+    }
 }
 
 // 获取请求的 User-Agent 并验证

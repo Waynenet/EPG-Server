@@ -1,7 +1,7 @@
 ![EPG-Server](https://socialify.git.ci/taksssss/EPG-Server/image?description=1&descriptionEditable=Docker%F0%9F%90%B3%E9%83%A8%E7%BD%B2%EF%BC%8C%E5%B8%A6%E8%AE%BE%E7%BD%AE%E7%95%8C%E9%9D%A2%E3%80%81%E5%8F%B0%E6%A0%87%E7%AE%A1%E7%90%86%EF%BC%8C%E6%94%AF%E6%8C%81DIYP%E3%80%81%E8%B6%85%E7%BA%A7%E7%9B%B4%E6%92%AD%E5%8F%8Axmltv%E3%80%82&font=Inter&forks=1&issues=1&language=1&owner=1&pattern=Circuit%20Board&pulls=1&stargazers=1&theme=Auto)
 
 # 📺 EPG-Server
-![Docker Pulls](https://img.shields.io/docker/pulls/taksss/php-epg) ![Image Size](https://img.shields.io/docker/image-size/taksss/php-epg)
+![Docker Pulls](https://img.shields.io/docker/pulls/taksss/php-epg) ![Image Size](https://img.shields.io/docker/image-size/taksss/php-epg/latest)
 
 PHP 实现的 EPG（电子节目指南）服务端， `Docker` 部署，自带设置界面、台标管理、直播源管理，支持 **DIYP & 百川** 、 **超级直播** 以及 **xmltv** 格式。
 
@@ -19,7 +19,7 @@ PHP 实现的 EPG（电子节目指南）服务端， `Docker` 部署，自带�
 
 ➰ **直播源管理**：支持聚合 TXT/M3U 直播源，并定时更新。
 
-🔒 **访问权限控制**：支持设置 TOKEN ，限制访问 EPG 服务及直播源。
+🔒 **访问权限控制**：支持设置 TOKEN 、User-Agent ，限制访问 EPG 服务及直播源。
 
 ⏱️ **缓存支持**：集成 Memcached，可自定义缓存时间。
 
@@ -104,6 +104,8 @@ PHP 实现的 EPG（电子节目指南）服务端， `Docker` 部署，自带�
     > 默认端口为 `5678` ，根据需要自行修改（注意端口占用）
     > 
     > 可选参数：`-e PHP_MEMORY_LIMIT=512M` ，设置 PHP 内存限制，默认 `512M`
+    > 
+    > 可选参数：`-e ENABLE_FFMPEG=true` ，启用 ffmpeg 组件
     > 
     > 无法正常拉取镜像的，可使用同步更新的 `腾讯云容器镜像`（`ccr.ccs.tencentyun.com/taksss/php-epg:latest`）
 

@@ -7,7 +7,8 @@ if (!(isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_RE
 
 // 检测 ffmpeg 是否安装
 if (!shell_exec('which ffprobe')) {
-    echo '<p>未检测到 ffmpeg 环境，请自行安装。</p>';
+    echo '<p>未检测到 ffmpeg 环境，请使用以下指令重新部署：
+        <br>docker run -e ENABLE_FFMPEG=true -d --name php-epg -p 5678:80 --restart always taksss/php-epg:latest</p>';
     exit;
 }
 
@@ -22,12 +23,57 @@ header('X-Accel-Buffering: no');
 $channelsFile = 'data/live/channels.csv';
 $channelsInfoFile = 'data/live/channels_info.csv';
 
-// 检查 channels.csv 文件是否存在
-if (!file_exists($channelsFile)) {
-    die('channels.csv 文件不存在');
+// cleanMode 参数为 true 时，清除测速数据
+if (isset($_GET['cleanMode']) && $_GET['cleanMode'] === 'true') {
+    // 读取 channels_info.csv 文件
+    if (!file_exists($channelsInfoFile)) die('channels_info.csv 文件不存在');
+    $channelsInfo = array_map('str_getcsv', file($channelsInfoFile));
+    $infoHeaders = array_shift($channelsInfo);
+    $tagIndex = array_search('tag', $infoHeaders);
+    $speedIndex = array_search('speed', $infoHeaders);
+
+    if ($tagIndex === false || $speedIndex === false) die('channels_info.csv 文件缺少字段');
+
+    // 读取 channels.csv 文件
+    if (!file_exists($channelsFile)) die('channels.csv 文件不存在');
+    $channels = array_map('str_getcsv', file($channelsFile));
+    $headers = array_shift($channels);
+    $disableIndex = array_search('disable', $headers);
+    $modifiedIndex = array_search('modified', $headers);
+
+    if ($disableIndex === false || $modifiedIndex === false) die('channels.csv 文件缺少字段');
+
+    // 更新 channels.csv 中与 channels_info.csv 中 tag 匹配的记录
+    foreach ($channels as &$channel) {
+        foreach ($channelsInfo as $infoRow) {
+            if ($infoRow[$speedIndex] === 'N/A' && 
+                $infoRow[$tagIndex] === $channel[array_search('tag', $headers)]) {
+                $channel[$disableIndex] = '0'; // 清除禁用标志
+                $channel[$modifiedIndex] = '0'; // 清除修改标志
+                break;
+            }
+        }
+    }
+
+    // 重新写回更新后的 channels.csv 文件
+    array_unshift($channels, $headers);
+    $fileHandle = fopen($channelsFile, 'w');
+    foreach ($channels as $channel) {
+        fputcsv($fileHandle, $channel);
+    }
+    fclose($fileHandle);
+
+    // 仅清空 channels_info.csv 中的数据，保留表头
+    $fileHandle = fopen($channelsInfoFile, 'w');
+    fputcsv($fileHandle, $infoHeaders); // 写入表头
+    fclose($fileHandle);
+
+    echo "测速数据已清除。";
+    exit;
 }
 
-// 读取 CSV 文件并解析
+// 读取 channels.csv 文件并解析
+if (!file_exists($channelsFile)) die('channels.csv 文件不存在');
 $channels = array_map('str_getcsv', file($channelsFile));
 
 // 提取表头，定位 streamUrl 和 tag 索引

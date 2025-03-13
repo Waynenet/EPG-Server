@@ -751,7 +751,8 @@ try {
                     exit;
                 }
             
-                generateLiveFiles($content, 'tv', $saveOnly = true); // 重新生成 M3U 和 TXT 文件
+                $fileName = $_POST['file_path'] ? 'file/' . md5(urlencode($_POST['file_path'])) : 'tv';
+                generateLiveFiles($content, $fileName, $saveOnly = true); // 重新生成 M3U 和 TXT 文件
                 echo json_encode(['success' => true]);
                 exit;
 

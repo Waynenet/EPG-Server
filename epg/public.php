@@ -480,7 +480,7 @@ function doParseSourceInfo($urlLine = null) {
                         while (!empty($urlContentLines[$j]) && $urlContentLines[$j][0] === '#') {
                             $streamUrl .= trim($urlContentLines[$j++]) . '<br>';
                         }
-                        $streamUrl .= trim($urlContentLines[$j] ?? '');
+                        $streamUrl .= strtok(trim($urlContentLines[$j] ?? ''), '\\');
                         $tag = md5($url . $groupTitle . $originalChannelName . $streamUrl);
 
                         $rowData = [
