@@ -1,0 +1,66 @@
+name: Upstream Sync
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    - cron: "13 22 * * *" # 每日定时执行
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  sync_latest_from_upstream:
+    name: Sync latest commits from upstream repo
+    runs-on: ubuntu-latest
+    if: ${{ github.event.repository.fork }}
+
+    steps:
+      # Step 1: 检出目标仓库代码
+      - name: Checkout target repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # 获取完整的提交历史，确保 rebase 能正常工作
+
+      # Step 2: 添加上游仓库并获取更新
+      - name: Add upstream and fetch
+        run: |
+          git remote -v
+          if ! git remote | grep -q "upstream"; then
+            git remote add upstream https://github.com/taksssss/EPG-Server.git
+          fi
+          git fetch upstream main --tags
+
+      # Step 3: 设置 Git 用户信息
+      - name: Set Git user identity
+        run: |
+          git config --global user.name "Waynenet"
+          git config --global user.email "54445994+Waynenet@users.noreply.github.com"
+
+      # Step 4: 使用 rebase 同步上游改动，避免生成多余的 merge commit
+      - name: Rebase upstream changes
+        id: rebase
+        run: |
+          git checkout main
+          echo "Starting rebase with upstream changes..."
+          if ! git rebase upstream/main; then
+            echo "::error::Rebase conflict detected. Aborting rebase."
+            git rebase --abort
+            exit 1
+          fi
+
+      # Step 5: 强制推送更新后的代码到目标仓库
+      - name: Force push to target branch
+        if: success()
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          echo "Force pushing updates to origin main..."
+          git push origin main --force
+
+      # Step 6: 同步失败时的检查与提示
+      - name: Sync check
+        if: failure()
+        run: |
+          echo "::error::Rebase failed. Manual intervention is required."
+          echo "Please follow the project README.md for manual sync instructions."
+          exit 1
