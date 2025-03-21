@@ -36,11 +36,24 @@ jobs:
           git config --global user.name "Waynenet"
           git config --global user.email "54445994+Waynenet@users.noreply.github.com"
 
-      # Step 4: 使用 rebase 同步上游改动，避免生成多余的 merge commit
-      - name: Rebase upstream changes
-        id: rebase
+      # Step 4: 检测是否有上游更新
+      - name: Check for upstream changes
+        id: check_update
         run: |
           git checkout main
+          # 比较本地 main 与 upstream/main 是否有差异
+          if [ "$(git rev-parse HEAD)" == "$(git rev-parse upstream/main)" ]; then
+            echo "No new updates found."
+            echo "HAS_UPDATE=false" >> $GITHUB_ENV
+          else
+            echo "New updates detected."
+            echo "HAS_UPDATE=true" >> $GITHUB_ENV
+          fi
+
+      # Step 5: 使用 rebase 同步上游改动，避免生成多余的 merge commit
+      - name: Rebase upstream changes
+        if: env.HAS_UPDATE == 'true'
+        run: |
           echo "Starting rebase with upstream changes..."
           if ! git rebase upstream/main; then
             echo "::error::Rebase conflict detected. Aborting rebase."
@@ -48,16 +61,28 @@ jobs:
             exit 1
           fi
 
-      # Step 5: 强制推送更新后的代码到目标仓库
+      # Step 6: 强制推送更新后的代码到目标仓库
       - name: Force push to target branch
-        if: success()
+        if: env.HAS_UPDATE == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
         run: |
           echo "Force pushing updates to origin main..."
           git push origin main --force
 
-      # Step 6: 同步失败时的检查与提示
+      # Step 7: 触发第二个工作流
+      - name: Trigger second workflow
+        if: env.HAS_UPDATE == 'true' && success()
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          echo "Triggering second workflow..."
+          curl -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.everest-preview+json" \
+            https://api.github.com/repos/${{ github.repository }}/dispatches \
+            -d '{"event_type": "sync_complete"}'
+
+      # Step 8: 同步失败时的检查与提示
       - name: Sync check
         if: failure()
         run: |
