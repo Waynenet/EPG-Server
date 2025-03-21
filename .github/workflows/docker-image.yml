@@ -5,6 +5,8 @@ on:
   push:               # 允许推送触发
     branches:
       - main
+  repository_dispatch:  # 支持由上游同步触发
+    types: [sync_complete]
 
 jobs:
   build:
